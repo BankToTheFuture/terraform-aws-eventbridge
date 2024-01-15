@@ -56,7 +56,7 @@ locals {
 }
 
 data "aws_cloudwatch_event_bus" "this" {
-  count = (var.create && var.create_bus) || (var.bus_name == "") ? 0 : 1
+  count = var.create && var.create_bus ? 0 : 1
 
   name = var.bus_name
 }
@@ -88,10 +88,11 @@ resource "aws_cloudwatch_event_rule" "this" {
   event_bus_name = var.create_bus ? aws_cloudwatch_event_bus.this[0].name : var.bus_name
 
   description         = lookup(each.value, "description", null)
-  is_enabled          = lookup(each.value, "enabled", true)
+  is_enabled          = lookup(each.value, "enabled", null)
   event_pattern       = lookup(each.value, "event_pattern", null)
   schedule_expression = lookup(each.value, "schedule_expression", null)
   role_arn            = lookup(each.value, "role_arn", false) ? aws_iam_role.eventbridge[0].arn : null
+  state               = lookup(each.value, "state", null)
 
   tags = merge(var.tags, {
     Name = each.value.Name
@@ -697,6 +698,7 @@ resource "aws_pipes_pipe" "this" {
     for_each = try([each.value.target_parameters], [])
 
     content {
+      input_template = try(target_parameters.value.input_template, null)
       dynamic "sqs_queue_parameters" {
         for_each = try([target_parameters.value.sqs_queue_parameters], [])
 
